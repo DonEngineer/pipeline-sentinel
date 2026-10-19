@@ -36,7 +36,7 @@ Design principle: **deterministic where it must be exact** (checks, thresholds),
 - 🔍 Deterministic checks: row-count vs baseline, freshness, schema drift, null rates, duplicates, value ranges
 - 🗂️ YAML check suites: declare per-source checks and thresholds in `sentinel.yaml`
 - 🗄️ SQLAlchemy sources: SQL Server in production, SQLite for the local demo
-- 🤖 LangGraph triage agent: correlates failed checks into incidents (M3)
+- 🤖 LangGraph triage agent: correlates failed checks into incidents with severity, probable cause, and suggested action
 - ⏰ Scheduled runs via APScheduler (M4)
 - 📊 Streamlit dashboard: source health, check history, alerts (M4)
 - 🧪 Eval harness with synthetic anomaly injection (M5)
@@ -61,6 +61,13 @@ To watch it catch real anomalies, delete half of today's rows from `feed_b` (vol
 
 Check suites are declared in `sentinel.yaml`: per source, list the checks to run with their thresholds. Unknown check names fail fast with a clear error.
 
+```bash
+# 4. Triage failures into incidents  (M3, requires Ollama running)
+python -m pipeline_sentinel.cli triage --config sentinel.yaml
+```
+
+Severity is scored by deterministic rules (stale data or collapsed volume → critical); the LLM correlates the failed checks into one incident with a probable cause and a suggested action. Incidents are logged to `.sentinel/incidents.jsonl`.
+
 Copy `.env.example` to `.env` to override thresholds, the state directory, or the Ollama model.
 
 ## Project structure
@@ -73,7 +80,7 @@ src/pipeline_sentinel/
 ├── seed.py        Demo database generator                                    (M1)
 ├── cli.py         check command (YAML suite runner)                          (M2)
 ├── suite.py       Suite YAML loading + check registry                        (M2)
-├── triage/        LangGraph triage agent                                     (M3)
+├── triage/        LangGraph triage agent: severity + cause + action            (M3)
 └── scheduler/     APScheduler wiring                                         (M4)
 sentinel.yaml      Example check suite                                        (M2)
 app/               Streamlit dashboard                                        (M4)
@@ -89,8 +96,8 @@ data/              Demo databases (gitignored)
 |---|---|
 | M1 Check engine: sources, checks, history, seed, CLI | ✅ Done |
 | M2 Anomaly rules: duplicates, ranges, configurable suites | ✅ Done |
-| M3 LangGraph triage agent: correlate → severity → root cause | ⬜ Next |
-| M4 Scheduler + Streamlit dashboard | ⬜ |
+| M3 LangGraph triage agent: correlate → severity → root cause | ✅ Done |
+| M4 Scheduler + Streamlit dashboard | ⬜ Next |
 | M5 Eval harness (synthetic anomaly injection) + polish | ⬜ |
 
 Stretch goals: Great Expectations integration, webhook/PagerDuty alerts, dbt source support.

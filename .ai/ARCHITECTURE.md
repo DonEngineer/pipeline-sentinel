@@ -19,6 +19,16 @@ parses it into `SourceSpec`/`CheckSpec` and instantiates checks through
 (`cli.py check --config`) runs the suite, prints PASS/FAIL per check, and
 appends everything to the history log. This keeps check selection out of code.
 
+## Triage (M3)
+
+`triage/agent.py` builds a per-source LangGraph graph: `correlate -> hypothesize`.
+`correlate` scores severity with deterministic rules (freshness failure or
+>50% volume drop → critical; row_count/schema_drift → high; quality checks →
+medium; worst wins). `hypothesize` asks the LLM for PROBABLE_CAUSE and
+SUGGESTED_ACTION, parsed with regex and a raw-text fallback. `triage()` groups
+failures by source in Python and invokes the graph once per source, producing
+`Incident` objects logged to `.sentinel/incidents.jsonl`.
+
 ## Key decisions
 
 - **Checks are pure functions of (source, config).** No network except the DB
