@@ -11,6 +11,14 @@ Source (SQL table)
   → [M2] rule engine → [M3] triage agent → [M4] scheduler + dashboard
 ```
 
+## Suites (M2)
+
+`sentinel.yaml` declares per-source check lists with thresholds. `suite.py`
+parses it into `SourceSpec`/`CheckSpec` and instantiates checks through
+`CHECK_REGISTRY`; unknown names raise `ValueError` immediately. The CLI
+(`cli.py check --config`) runs the suite, prints PASS/FAIL per check, and
+appends everything to the history log. This keeps check selection out of code.
+
 ## Key decisions
 
 - **Checks are pure functions of (source, config).** No network except the DB

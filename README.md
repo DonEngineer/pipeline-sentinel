@@ -33,7 +33,8 @@ Design principle: **deterministic where it must be exact** (checks, thresholds),
 
 ## Features
 
-- 🔍 Deterministic checks: row-count vs baseline, freshness, schema drift, null rates
+- 🔍 Deterministic checks: row-count vs baseline, freshness, schema drift, null rates, duplicates, value ranges
+- 🗂️ YAML check suites: declare per-source checks and thresholds in `sentinel.yaml`
 - 🗄️ SQLAlchemy sources: SQL Server in production, SQLite for the local demo
 - 🤖 LangGraph triage agent: correlates failed checks into incidents (M3)
 - ⏰ Scheduled runs via APScheduler (M4)
@@ -51,11 +52,14 @@ pip install -e ".[dev]"
 # 2. Build the demo database (two feeds, 14 days of healthy history)
 python -m pipeline_sentinel.seed --db data/demo.db
 
-# 3. Run checks against a source  (M1)
-python -m pipeline_sentinel.cli check --db data/demo.db --source feed_a
+# 3. Run the check suite  (M1/M2)
+python -m pipeline_sentinel.cli check --config sentinel.yaml
+# or a single source: --config sentinel.yaml --source feed_a
 ```
 
-To watch it catch a real anomaly, delete half of today's rows from `feed_b` and re-run the check — the volume check fails with the deviation in the details.
+To watch it catch real anomalies, delete half of today's rows from `feed_b` (volume check fails) or push some `amount` values above 10000 in `feed_a` (range check fails) — each failure reports its deviation in the details.
+
+Check suites are declared in `sentinel.yaml`: per source, list the checks to run with their thresholds. Unknown check names fail fast with a clear error.
 
 Copy `.env.example` to `.env` to override thresholds, the state directory, or the Ollama model.
 
@@ -67,9 +71,11 @@ src/pipeline_sentinel/
 ├── sources/       SQLAlchemy source connector (SQL Server / SQLite)        (M1)
 ├── history.py     Append-only JSONL log of check results                    (M1)
 ├── seed.py        Demo database generator                                    (M1)
-├── cli.py         check / seed commands                                      (M1)
+├── cli.py         check command (YAML suite runner)                          (M2)
+├── suite.py       Suite YAML loading + check registry                        (M2)
 ├── triage/        LangGraph triage agent                                     (M3)
 └── scheduler/     APScheduler wiring                                         (M4)
+sentinel.yaml      Example check suite                                        (M2)
 app/               Streamlit dashboard                                        (M4)
 evals/             Anomaly-injection eval harness                             (M5)
 data/              Demo databases (gitignored)
@@ -82,8 +88,8 @@ data/              Demo databases (gitignored)
 | Milestone | Status |
 |---|---|
 | M1 Check engine: sources, checks, history, seed, CLI | ✅ Done |
-| M2 Anomaly rules: duplicates, ranges, configurable suites | ⬜ Next |
-| M3 LangGraph triage agent: correlate → severity → root cause | ⬜ |
+| M2 Anomaly rules: duplicates, ranges, configurable suites | ✅ Done |
+| M3 LangGraph triage agent: correlate → severity → root cause | ⬜ Next |
 | M4 Scheduler + Streamlit dashboard | ⬜ |
 | M5 Eval harness (synthetic anomaly injection) + polish | ⬜ |
 

@@ -32,14 +32,15 @@ and evals — grounded in the owner's day job (multi-million-row data channels).
 
 ## Milestones
 
-M1 check engine ✅ → M2 anomaly rules → M3 triage agent → M4 scheduler+dashboard
+M1 check engine ✅ → M2 anomaly rules ✅ → M3 triage agent → M4 scheduler+dashboard
 → M5 evals+polish. See README roadmap for details.
 
 ## Conventions
 
 - `src/pipeline_sentinel/<area>/` — one concern per package.
 - Config via env vars with sane local defaults (`config.py`); `.env.example`
-  documents them.
+  documents them. Check suites are YAML (`sentinel.yaml`); `suite.py` maps
+  check names to classes via `CHECK_REGISTRY`.
 - Timestamps are timezone-aware UTC everywhere (`datetime.now(UTC)`); the DB
   layer parses naive ISO strings as UTC.
 - State (schema snapshots, history JSONL) lives in `.sentinel/` (gitignored).
