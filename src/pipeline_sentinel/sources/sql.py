@@ -83,3 +83,33 @@ class SqlSource:
         if not total:
             return 0.0
         return (nulls or 0) / total
+
+    def duplicate_rate(self, columns: list[str] | None) -> float:
+        """Fraction of rows duplicated on ``columns`` (whole row when None)."""
+        key = ", ".join(columns) if columns else "*"
+        with self._engine.connect() as conn:
+            total = conn.execute(text(f"SELECT COUNT(*) FROM {self.source.table}")).scalar() or 0
+            distinct = (
+                conn.execute(
+                    text(
+                        f"SELECT COUNT(*) FROM (SELECT DISTINCT {key} FROM {self.source.table}) AS d"
+                    )
+                ).scalar()
+                or 0
+            )
+        if not total:
+            return 0.0
+        return (total - distinct) / total
+
+    def out_of_range_rate(self, column: str, min_value: float, max_value: float) -> float:
+        """Fraction of ``column`` values outside [``min_value``, ``max_value``]."""
+        query = text(
+            f"SELECT COUNT(*) AS total, "
+            f"SUM(CASE WHEN {column} < :lo OR {column} > :hi THEN 1 ELSE 0 END) AS ooo "
+            f"FROM {self.source.table}"
+        )
+        with self._engine.connect() as conn:
+            total, ooo = conn.execute(query, {"lo": min_value, "hi": max_value}).one()
+        if not total:
+            return 0.0
+        return (ooo or 0) / total

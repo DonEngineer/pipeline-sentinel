@@ -1,0 +1,31 @@
+# Pipeline Sentinel check suite — edit to watch your own sources.
+# Run with: python -m pipeline_sentinel.cli check --config sentinel.yaml
+sources:
+  - name: feed_a
+    connection_string: sqlite:///data/demo.db
+    table: feed_a
+    timestamp_column: loaded_at
+    checks:
+      - name: row_count
+        params: {baseline_days: 7, threshold_pct: 0.3}
+      - name: freshness
+        params: {max_age_hours: 26}
+      - name: schema_drift
+      - name: null_rate
+        params: {column: customer, max_null_rate: 0.05}
+      # Whole-row duplicates (catches re-sent batches with the same ids).
+      # Pass columns: [col1, col2] to check a natural key instead.
+      - name: duplicates
+        params: {max_duplicate_rate: 0.01}
+      - name: range
+        params: {column: amount, min_value: 0, max_value: 10000}
+  - name: feed_b
+    connection_string: sqlite:///data/demo.db
+    table: feed_b
+    timestamp_column: loaded_at
+    checks:
+      - name: row_count
+        params: {baseline_days: 7, threshold_pct: 0.3}
+      - name: freshness
+        params: {max_age_hours: 26}
+      - name: schema_drift
