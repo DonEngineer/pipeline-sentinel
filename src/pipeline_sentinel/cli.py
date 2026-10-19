@@ -4,6 +4,7 @@ Usage:
     python -m pipeline_sentinel.seed --db data/demo.db
     python -m pipeline_sentinel.cli check --config sentinel.yaml [--source feed_a]
     python -m pipeline_sentinel.cli triage --config sentinel.yaml [--source feed_a]
+    python -m pipeline_sentinel.cli watch --config sentinel.yaml --interval 60
 """
 
 from __future__ import annotations
@@ -36,12 +37,19 @@ def run_suite(config_path: str, only_source: str | None = None) -> list[CheckRes
     return results
 
 
-def run_triage(config_path: str, only_source: str | None = None) -> list[Incident]:
-    """Run the suite, then triage every failure into incidents."""
+def run_triage(
+    config_path: str,
+    only_source: str | None = None,
+    triage_failures: bool = True,
+) -> list[Incident]:
+    """Run the suite, then triage every failure into incidents (unless disabled)."""
     results = run_suite(config_path, only_source)
     failures = [result for result in results if not result.passed]
     if not failures:
         print("All checks passed — nothing to triage.")
+        return []
+    if not triage_failures:
+        print(f"{len(failures)} check(s) failed — triage skipped (--no-triage).")
         return []
     llm = OllamaChat(model=settings.llm_model, base_url=settings.ollama_base_url)
     incidents = triage(failures, build_agent(llm))
@@ -66,12 +74,28 @@ def main(argv: list[str] | None = None) -> int:
     triage_cmd.add_argument("--config", default="sentinel.yaml", help="Suite YAML path.")
     triage_cmd.add_argument("--source", default=None, help="Only triage this source.")
 
+    watch_cmd = sub.add_parser("watch", help="Run the suite on a schedule.")
+    watch_cmd.add_argument("--config", default="sentinel.yaml", help="Suite YAML path.")
+    watch_cmd.add_argument("--source", default=None, help="Only watch this source.")
+    watch_cmd.add_argument("--interval", type=int, default=60, help="Minutes between runs.")
+    watch_cmd.add_argument(
+        "--triage",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Triage failures with the LLM (needs Ollama running).",
+    )
+
     args = parser.parse_args(argv)
     if args.command == "check":
         results = run_suite(args.config, args.source)
         return 0 if all(r.passed for r in results) else 1
     if args.command == "triage":
         run_triage(args.config, args.source)
+        return 0
+    if args.command == "watch":
+        from pipeline_sentinel.scheduler import start
+
+        start(args.config, args.interval, args.source, args.triage)
         return 0
     return 0
 
