@@ -3,6 +3,7 @@
 Usage:
     python -m pipeline_sentinel.seed --db data/demo.db
     python -m pipeline_sentinel.cli check --config sentinel.yaml [--source feed_a]
+    python -m pipeline_sentinel.cli triage --config sentinel.yaml [--source feed_a]
 """
 
 from __future__ import annotations
@@ -12,7 +13,9 @@ import argparse
 from pipeline_sentinel import history
 from pipeline_sentinel.config import settings
 from pipeline_sentinel.suite import build_check, load_suite, to_source
-from pipeline_sentinel.types import CheckResult
+from pipeline_sentinel.triage import build_agent, triage
+from pipeline_sentinel.triage.llm import OllamaChat
+from pipeline_sentinel.types import CheckResult, Incident
 
 
 def run_suite(config_path: str, only_source: str | None = None) -> list[CheckResult]:
@@ -33,6 +36,23 @@ def run_suite(config_path: str, only_source: str | None = None) -> list[CheckRes
     return results
 
 
+def run_triage(config_path: str, only_source: str | None = None) -> list[Incident]:
+    """Run the suite, then triage every failure into incidents."""
+    results = run_suite(config_path, only_source)
+    failures = [result for result in results if not result.passed]
+    if not failures:
+        print("All checks passed — nothing to triage.")
+        return []
+    llm = OllamaChat(model=settings.llm_model, base_url=settings.ollama_base_url)
+    incidents = triage(failures, build_agent(llm))
+    for incident in incidents:
+        print(f"[{incident.severity.upper()}] {incident.id} — {incident.title}")
+        print(f"  Probable cause:   {incident.probable_cause}")
+        print(f"  Suggested action: {incident.suggested_action}")
+    history.append_incidents(incidents, settings.sentinel_dir)
+    return incidents
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point."""
     parser = argparse.ArgumentParser(prog="sentinel", description="Pipeline Sentinel CLI.")
@@ -42,10 +62,17 @@ def main(argv: list[str] | None = None) -> int:
     check_cmd.add_argument("--config", default="sentinel.yaml", help="Suite YAML path.")
     check_cmd.add_argument("--source", default=None, help="Only run this source.")
 
+    triage_cmd = sub.add_parser("triage", help="Triage failed checks into incidents.")
+    triage_cmd.add_argument("--config", default="sentinel.yaml", help="Suite YAML path.")
+    triage_cmd.add_argument("--source", default=None, help="Only triage this source.")
+
     args = parser.parse_args(argv)
     if args.command == "check":
         results = run_suite(args.config, args.source)
         return 0 if all(r.passed for r in results) else 1
+    if args.command == "triage":
+        run_triage(args.config, args.source)
+        return 0
     return 0
 
 

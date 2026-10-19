@@ -42,3 +42,29 @@ class CheckResult:
             "details": self.details,
             "checked_at": self.checked_at.isoformat(),
         }
+
+
+@dataclass
+class Incident:
+    """One triaged incident: correlated failures plus severity and cause."""
+
+    id: str
+    source: str
+    severity: str  # low | medium | high | critical
+    title: str
+    probable_cause: str
+    suggested_action: str
+    failed_checks: list[str] = field(default_factory=list)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "source": self.source,
+            "severity": self.severity,
+            "title": self.title,
+            "probable_cause": self.probable_cause,
+            "suggested_action": self.suggested_action,
+            "failed_checks": self.failed_checks,
+            "created_at": self.created_at.isoformat(),
+        }
