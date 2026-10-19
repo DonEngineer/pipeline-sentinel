@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Project state (local only)
+.sentinel/
+*.db
+.env
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
