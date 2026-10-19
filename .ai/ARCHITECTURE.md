@@ -29,6 +29,16 @@ SUGGESTED_ACTION, parsed with regex and a raw-text fallback. `triage()` groups
 failures by source in Python and invokes the graph once per source, producing
 `Incident` objects logged to `.sentinel/incidents.jsonl`.
 
+## Scheduler and dashboard (M4)
+
+`scheduler/runner.py` wires APScheduler: `run_once()` runs the suite via
+`cli.run_triage` (with `--triage/--no-triage` support), and `start()` runs once
+immediately then on an interval with `max_instances=1`. The `watch` CLI command
+delegates to `start`. The Streamlit dashboard (`app/streamlit_app.py`) reads the
+JSONL logs: source health from the latest result per (source, check), triaged
+incidents in expanders with severity icons, the last 50 check results, and a
+"Run checks now" button.
+
 ## Key decisions
 
 - **Checks are pure functions of (source, config).** No network except the DB
