@@ -39,7 +39,7 @@ Design principle: **deterministic where it must be exact** (checks, thresholds),
 - 🤖 LangGraph triage agent: correlates failed checks into incidents with severity, probable cause, and suggested action
 - ⏰ Scheduled runs via APScheduler, with LLM triage per run
 - 📊 Streamlit dashboard: source health, check history, incidents
-- 🧪 Eval harness with synthetic anomaly injection (M5)
+- 🧪 Eval harness: synthetic anomaly injection, detection vs false-positive metrics
 
 ## Quickstart
 
@@ -84,6 +84,34 @@ Shows source health from the latest check per source, triaged incidents with sev
 
 Copy `.env.example` to `.env` to override thresholds, the state directory, or the Ollama model.
 
+## Demo walkthrough
+
+The 60-second story this repo tells: everything is green, something breaks,
+the agent files one incident instead of spamming alerts.
+
+```bash
+# 1. Seed two weeks of healthy demo data
+python -m pipeline_sentinel.seed --db data/demo.db
+
+# 2. All green
+python -m pipeline_sentinel.cli check --config sentinel.yaml
+
+# 3. Break it: drop half of the latest feed_a batch
+python -c "from pipeline_sentinel.eval.injectors import drop_today; drop_today('data/demo.db', 'feed_a', fraction=0.5)"
+python -m pipeline_sentinel.cli check --config sentinel.yaml   # feed_a.row_count FAILs
+
+# 4. Triage the failure into one incident  (needs Ollama running)
+python -m pipeline_sentinel.cli triage --config sentinel.yaml
+
+# 5. How well does it detect? Run the eval harness (no LLM needed)
+python -m pipeline_sentinel.cli eval --config sentinel.yaml
+# 7 scenarios, 6/6 expected failures caught, 0 false positives
+
+# 6. Restore the demo data and open the dashboard
+python -m pipeline_sentinel.seed --db data/demo.db
+streamlit run app/streamlit_app.py
+```
+
 ## Project structure
 
 ```
@@ -98,7 +126,7 @@ src/pipeline_sentinel/
 ├── scheduler/     APScheduler wiring: run-once + interval runs                 (M4)
 sentinel.yaml      Example check suite                                        (M2)
 app/               Streamlit dashboard: health, incidents, history                (M4)
-evals/             Anomaly-injection eval harness                             (M5)
+eval/              Anomaly-injection eval harness                             (M5)
 data/              Demo databases (gitignored)
 .sentinel/         Schema snapshots + check history (gitignored)
 .ai/               Handoff docs for AI-assisted development
@@ -112,8 +140,7 @@ data/              Demo databases (gitignored)
 | M2 Anomaly rules: duplicates, ranges, configurable suites | ✅ Done |
 | M3 LangGraph triage agent: correlate → severity → root cause | ✅ Done |
 | M4 Scheduler + Streamlit dashboard | ✅ Done |
-| M5 Eval harness + polish (CHANGELOG, demo video/GIF) | ⬜ Next |
-| M5 Eval harness (synthetic anomaly injection) + polish | ⬜ |
+| M5 Eval harness (synthetic anomaly injection) + polish | ✅ Done |
 
 Stretch goals: Great Expectations integration, webhook/PagerDuty alerts, dbt source support.
 

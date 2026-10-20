@@ -33,7 +33,7 @@ and evals — grounded in the owner's day job (multi-million-row data channels).
 ## Milestones
 
 M1 check engine ✅ → M2 anomaly rules ✅ → M3 triage agent ✅ → M4 scheduler+dashboard ✅
-→ M5 evals+polish. See README roadmap for details.
+→ M5 eval harness ✅. All milestones complete; see README roadmap and CHANGELOG.
 
 ## Conventions
 

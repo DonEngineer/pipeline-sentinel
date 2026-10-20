@@ -39,6 +39,16 @@ JSONL logs: source health from the latest result per (source, check), triaged
 incidents in expanders with severity icons, the last 50 check results, and a
 "Run checks now" button.
 
+## Eval harness (M5)
+
+`eval/injectors.py` breaks throwaway seeded DBs on purpose (volume drop,
+stall, null spike, re-sent batch, out-of-range values, schema change);
+`eval/run.py` seeds, warms stateful checks, injects, and measures which
+expected `source.check` failures were caught and which failures were false
+positives. Latest run: 6/6 detected, 0 false positives (`eval` CLI command,
+report in `.sentinel/eval_report.json`). "Today" for volume checks is the
+latest date with data, not the wall clock — immune to timezone skew.
+
 ## Key decisions
 
 - **Checks are pure functions of (source, config).** No network except the DB
