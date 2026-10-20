@@ -27,6 +27,9 @@ def seed(db_path: str | Path, days: int = 14, seed_value: int = 42) -> Path:
         path.unlink()
     engine = create_engine(f"sqlite:///{path}")
     now = datetime.now(UTC).replace(hour=8, minute=0, second=0, microsecond=0)
+    if now > datetime.now(UTC):
+        # Before 08:00 UTC, "today at 08:00" would be in the future.
+        now -= timedelta(days=1)
     with engine.begin() as conn:
         conn.execute(
             text(

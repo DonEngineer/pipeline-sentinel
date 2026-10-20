@@ -11,11 +11,14 @@ def run_once(
     config_path: str,
     only_source: str | None = None,
     triage_failures: bool = True,
+    sentinel_dir: str | None = None,
 ) -> list[Incident]:
     """Run the suite once and triage failures (unless disabled)."""
     from pipeline_sentinel.cli import run_triage
 
-    return run_triage(config_path, only_source, triage_failures=triage_failures)
+    return run_triage(
+        config_path, only_source, triage_failures=triage_failures, sentinel_dir=sentinel_dir
+    )
 
 
 def start(
@@ -23,6 +26,7 @@ def start(
     interval_minutes: int = 60,
     only_source: str | None = None,
     triage_failures: bool = True,
+    sentinel_dir: str | None = None,
 ) -> None:
     """Run immediately, then every ``interval_minutes`` until interrupted."""
     scheduler = BlockingScheduler()
@@ -30,12 +34,12 @@ def start(
         run_once,
         "interval",
         minutes=interval_minutes,
-        args=[config_path, only_source, triage_failures],
+        args=[config_path, only_source, triage_failures, sentinel_dir],
         id="sentinel",
         max_instances=1,
     )
     print(f"Watching {config_path} every {interval_minutes} minutes. Ctrl+C to stop.")
-    run_once(config_path, only_source, triage_failures)
+    run_once(config_path, only_source, triage_failures, sentinel_dir)
     try:
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):

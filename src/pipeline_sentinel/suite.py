@@ -70,7 +70,7 @@ def load_suite(path: str | Path) -> list[SourceSpec]:
     return specs
 
 
-def build_check(spec: CheckSpec) -> Check:
+def build_check(spec: CheckSpec, snapshot_dir: str | None = None) -> Check:
     """Instantiate a check from its spec; raises ValueError on unknown names."""
     try:
         cls = CHECK_REGISTRY[spec.name]
@@ -78,7 +78,7 @@ def build_check(spec: CheckSpec) -> Check:
         raise ValueError(f"unknown check: {spec.name!r}") from None
     params = dict(spec.params)
     if spec.name == "schema_drift":
-        params.setdefault("snapshot_dir", settings.sentinel_dir)
+        params.setdefault("snapshot_dir", snapshot_dir or settings.sentinel_dir)
     return cls(**params)
 
 

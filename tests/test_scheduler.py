@@ -43,15 +43,13 @@ def test_run_once_runs_suite_and_logs_history(tmp_path, monkeypatch):
 
 
 def test_run_once_reports_failures_without_triage(tmp_path, monkeypatch):
+    from pipeline_sentinel.eval import injectors
+
     db = tmp_path / "demo.db"
-    seed(db, days=2)
+    seed(db, days=10)
+    injectors.stale_days(db, "feed_a", days=3)  # deterministic failure, any time of day
     config = tmp_path / "sentinel.yaml"
-    config.write_text(
-        SUITE_YAML.replace("{db}", str(db)).replace(
-            "max_age_hours: 48", "max_age_hours: 0.001"
-        ),
-        encoding="utf-8",
-    )
+    config.write_text(SUITE_YAML.replace("{db}", str(db)), encoding="utf-8")
     _use_tmp_settings(tmp_path, monkeypatch)
     incidents = run_once(str(config), triage_failures=False)
     assert incidents == []  # triage disabled, so no incidents even on failure
