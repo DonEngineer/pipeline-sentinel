@@ -8,6 +8,8 @@ An **agentic data pipeline watchdog**: scheduled checks watch your data sources 
 
 Silent pipeline failures are usually discovered by the customer. This project is the watchdog you wish you had: deterministic checks where exactness matters, agentic judgment where noise needs reducing. Everything runs local for $0.
 
+![Dashboard demo: healthy sources, an injected volume drop, and the triaged incident](docs/dashboard.gif)
+
 ## How it works
 
 ```
